@@ -1,64 +1,24 @@
-# .github/workflows/docker-publish.yml
-name: Build and Push Docker Image
+name: Docker Image CI
 
+permissions: write-all
 on:
-  # 移除了 push 触发器，改为手动触发
-  workflow_dispatch:
-    inputs:
-      # 定义一个输入框，让您在运行时输入版本号
-      version:
-        description: "Docker image version tag (e.g., v1.0, v1.1-alpha)"
-        required: true
-        default: "v2"
-      # 定义一个复选框，让您决定是否更新 latest 标签
-      update_latest:
-        description: 'Update the "latest" tag as well?'
-        type: boolean
-        default: false
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
 jobs:
-  build_and_push:
+  build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repository
-        # 需要获取你手动运行时所在的分支（通常是main）
-        uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-      - name: Get Camoufox Download URL
-        id: get_camoufox_url
-        run: |
-          URL=$(curl -s "https://api.github.com/repos/${{ github.repository }}/releases/latest" | grep "browser_download_url.*camoufox-linux.tar.gz" | cut -d : -f 2,3 | tr -d '", ')
-          echo "CAMOUFOX_URL=$URL" >> $GITHUB_ENV
+    - name: Log in to GitHub Container Registry
+      run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+    - name: Build the Docker image
+      run: docker build . --file Dockerfile --tag ghcr.io/${{ github.repository_owner }}/xiaojq-v:latest
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build and push Docker image
-        id: build-and-push
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          # 核心修改：根据您输入的版本号来生成标签
-          # 格式是：ellinalopez/cloud-studio:v1.0-testing
-          tags: jjf1126/ais2api:${{ github.event.inputs.version }}
-          build-args: |
-            CAMOUFOX_URL=${{ env.CAMOUFOX_URL }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      # 新增步骤：如果勾选了 "update_latest"，则把刚才的镜像也打上 latest 标签
-      - name: Tag and push latest
-        # 使用 if 条件判断是否运行此步骤
-        if: github.event.inputs.update_latest == true
-        run: |
-          IMAGE_ID=$(docker inspect --format='{{.Id}}' jjf1126/ais2api:${{ github.event.inputs.version }})
-          docker tag $IMAGE_ID jjf1126/ais2api:latest
-          docker push jjf1126/ais2api:latest
+    - name: Push the Docker image
+      run: docker push ghcr.io/${{ github.repository_owner }}/ais2api:latest
