@@ -1,16 +1,13 @@
 # .github/workflows/docker-publish.yml
-name: Build and Push Docker Image
+name: Build and Push Docker Image to GHCR
 
 on:
-  # 移除了 push 触发器，改为手动触发
   workflow_dispatch:
     inputs:
-      # 定义一个输入框，让您在运行时输入版本号
       version:
         description: "Docker image version tag (e.g., v1.0, v1.1-alpha)"
         required: true
         default: "v2"
-      # 定义一个复选框，让您决定是否更新 latest 标签
       update_latest:
         description: 'Update the "latest" tag as well?'
         type: boolean
@@ -19,9 +16,13 @@ on:
 jobs:
   build_and_push:
     runs-on: ubuntu-latest
+    # 核心修改1：添加权限，允许 Actions 写入 GHCR
+    permissions:
+      contents: read
+      packages: write
+
     steps:
       - name: Checkout repository
-        # 需要获取你手动运行时所在的分支（通常是main）
         uses: actions/checkout@v4
 
       - name: Get Camoufox Download URL
@@ -30,11 +31,15 @@ jobs:
           URL=$(curl -s "https://api.github.com/repos/${{ github.repository }}/releases/latest" | grep "browser_download_url.*camoufox-linux.tar.gz" | cut -d : -f 2,3 | tr -d '", ')
           echo "CAMOUFOX_URL=$URL" >> $GITHUB_ENV
 
-      - name: Log in to Docker Hub
+      # 核心修改2：登录到 GitHub Container Registry (ghcr.io)
+      - name: Log in to the GitHub Container Registry
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry: ghcr.io
+          # `github.actor` 是您的 GitHub 用户名
+          username: ${{ github.actor }}
+          # `GITHUB_TOKEN` 是由 Actions 自动生成的，无需手动设置
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -46,9 +51,9 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          # 核心修改：根据您输入的版本号来生成标签
-          # 格式是：ellinalopez/cloud-studio:v1.0-testing
-          tags: ellinalopez/cloud-studio:${{ github.event.inputs.version }}
+          # 核心修改3：修改镜像标签格式以适应 GHCR
+          # 格式是：ghcr.io/YOUR_GITHUB_USERNAME/YOUR_REPO_NAME:tag
+          tags: ghcr.io/${{ github.repository_owner }}/cloud-studio:${{ github.event.inputs.version }}
           build-args: |
             CAMOUFOX_URL=${{ env.CAMOUFOX_URL }}
           cache-from: type=gha
@@ -56,9 +61,10 @@ jobs:
 
       # 新增步骤：如果勾选了 "update_latest"，则把刚才的镜像也打上 latest 标签
       - name: Tag and push latest
-        # 使用 if 条件判断是否运行此步骤
         if: github.event.inputs.update_latest == true
         run: |
-          IMAGE_ID=$(docker inspect --format='{{.Id}}' ellinalopez/cloud-studio:${{ github.event.inputs.version }})
-          docker tag $IMAGE_ID ellinalopez/cloud-studio:latest
-          docker push ellinalopez/cloud-studio:latest
+          # 注意：这里的镜像名称也需要更新为 GHCR 的格式
+          IMAGE_ID=$(docker inspect --format='{{.Id}}' ghcr.io/${{ github.repository_owner }}/cloud-studio:${{ github.event.inputs.version }})
+          docker tag $IMAGE_ID ghcr.io/${{ github.repository_owner }}/cloud-studio:latest
+          docker push ghcr.io/${{ github.repository_owner }}/cloud-studio:latest
+
