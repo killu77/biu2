@@ -35,9 +35,6 @@ RUN apt-get update && apt-get install -y unzip curl && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# [新增] 先将 camoufox 目录复制到镜像中
-COPY camoufox-linux/ /app/camoufox-linux/
-
 # 然后再给其中的文件添加执行权限
 RUN chmod +x /app/camoufox-linux/camoufox
 
