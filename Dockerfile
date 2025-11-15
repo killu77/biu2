@@ -29,6 +29,7 @@ RUN apt-get update && apt-get install -y unzip curl && \
     # 4. 删除不再需要的压缩包
     rm camoufox-linux.zip && \
     # 5. 现在可以100%确定路径是正确的，并赋予执行权限
+    COPY camoufox-linux/ /app/camoufox-linux/
     chmod +x /app/camoufox-linux/camoufox
 
 # 4. 【核心优化】现在，才拷贝你经常变动的代码文件。
