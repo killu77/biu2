@@ -42,7 +42,19 @@ RUN npm install --production
 # 3. 【核心优化】将浏览器下载和解压作为独立的一层。
 # 只要CAMOUFOX_URL不变，这一层就会被缓存。这层体积最大，缓存命中至关重要。
 ARG CAMOUFOX_URL
-
+RUN apt-get update && apt-get install -y unzip curl && \
+    # 2. 解压文件
+    unzip camoufox-linux.zip && \
+    # 3. 删除压缩包
+    rm camoufox-linux.zip && \
+    # 4. (核心修正) 使用通配符 * 将解压出来的未知名称的文件夹重命名为 'camoufox-linux'
+    #    这个命令会找到当前目录下所有以 'camoufox' 开头的文件夹并将其重命名
+    mv camoufox* camoufox-linux && \
+    # 5. 现在可以使用固定的路径来赋予执行权限
+    chmod +x /app/camoufox-linux/camoufox && \
+    # 6. 清理apt缓存
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # 4. 【核心优化】现在，才拷贝你经常变动的代码文件。
 # 这一步放在后面，确保你修改代码时，前面所有重量级的层都能利用缓存。
