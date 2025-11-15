@@ -3,7 +3,7 @@ FROM node:18-slim
 WORKDIR /app
 
 # 1. [保持不变] 安装最稳定、最不常变化的系统依赖。
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y && apt-get install -y unzip curl &&  \
     curl \
     libasound2 libatk-bridge2.0-0 libatk1.0-0 libatspi2.0-0 libcups2 \
     libdbus-1-3 libdrm2 libgbm1 libgtk-3-0 libnspr4 libnss3 libx11-6 \
