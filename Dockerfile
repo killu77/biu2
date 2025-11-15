@@ -43,10 +43,15 @@ RUN npm install --production
 # 只要CAMOUFOX_URL不变，这一层就会被缓存。这层体积最大，缓存命中至关重要。
 ARG CAMOUFOX_URL
 RUN apt-get update && apt-get install -y unzip curl && \
+    # 1. 下载文件
     curl -sSL ${CAMOUFOX_URL} -o camoufox-linux.zip && \
-    unzip camoufox-linux.zip && \
+    # 2. (核心修正) 自己创建一个目标目录
+    mkdir camoufox-linux && \
+    # 3. (核心修正) 使用 -d 选项将文件直接解压到指定目录中
+    unzip camoufox-linux.zip -d camoufox-linux && \
+    # 4. 删除不再需要的压缩包
     rm camoufox-linux.zip && \
-    mv camoufox* camoufox-linux && \
+    # 5. 现在可以100%确定路径是正确的，并赋予执行权限
     chmod +x /app/camoufox-linux/camoufox
 
 # 4. 【核心优化】现在，才拷贝你经常变动的代码文件。
