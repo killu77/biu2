@@ -22,13 +22,18 @@ ARG CAMOUFOX_URL
 RUN apt-get update && apt-get install -y unzip curl && \
     # 1. 下载文件
     curl -sSL ${CAMOUFOX_URL} -o camoufox-linux.zip && \
-    # 2. (核心修正) 自己创建一个目标目录
-    mkdir camoufox-linux && \
-    # 3. (核心修正) 使用 -d 选项将文件直接解压到指定目录中
-    unzip camoufox-linux.zip -d camoufox-linux && \
+    # 2. 创建最终的目标目录
+    mkdir -p /app/camoufox-linux && \
+    \
+    # 3. 将文件直接解压到最终的目标目录中
+    unzip camoufox-linux.zip -d /app/camoufox-linux && \
+    \
     # 4. 删除不再需要的压缩包
     rm camoufox-linux.zip && \
-    # 5. 现在可以100%确定路径是正确的，并赋予执行权限
+    \
+    # 5. 清理 apt 缓存，减小镜像体积
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # [新增] 先将 camoufox 目录复制到镜像中
 COPY camoufox-linux/ /app/camoufox-linux/
