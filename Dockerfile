@@ -3,35 +3,12 @@ FROM node:18-slim
 WORKDIR /app
 
 # 1. [保持不变] 安装最稳定、最不常变化的系统依赖。
-RUN apt-get update && \
-    apt-get install -y \
-    # === 您需要安装的工具 ===
-    unzip \
+RUN apt-get update && apt-get install -y \
     curl \
-    xvfb \
-    # === 您需要安装的库依赖 ===
-    libasound2 \
-    libatk-bridge2.0-0 \
-    libatk1.0-0 \
-    libatspi2.0-0 \
-    libcups2 \
-    libdbus-1-3 \
-    libdrm2 \
-    libgbm1 \
-    libgtk-3-0 \
-    libnspr4 \
-    libnss3 \
-    libx11-6 \
-    libx11-xcb1 \
-    libxcb1 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxext6 \
-    libxfixes3 \
-    libxrandr2 \
-    libxss1 \
-    libxtst6 \
-    # === 安装完成后立即清理，这是最佳实践 ===
+    libasound2 libatk-bridge2.0-0 libatk1.0-0 libatspi2.0-0 libcups2 \
+    libdbus-1-3 libdrm2 libgbm1 libgtk-3-0 libnspr4 libnss3 libx11-6 \
+    libx11-xcb1 libxcb1 libxcomposite1 libxdamage1 libxext6 libxfixes3 \
+    libxrandr2 libxss1 libxtst6 xvfb \
     && rm -rf /var/lib/apt/lists/*
 
 # 2. [保持不变] 拷贝 package.json 并安装依赖。
@@ -42,19 +19,10 @@ RUN npm install --production
 # 3. 【核心优化】将浏览器下载和解压作为独立的一层。
 # 只要CAMOUFOX_URL不变，这一层就会被缓存。这层体积最大，缓存命中至关重要。
 ARG CAMOUFOX_URL
-RUN apt-get update && apt-get install -y unzip curl && \
-    # 2. 解压文件
-    unzip camoufox-linux.zip && \
-    # 3. 删除压缩包
-    rm camoufox-linux.zip && \
-    # 4. (核心修正) 使用通配符 * 将解压出来的未知名称的文件夹重命名为 'camoufox-linux'
-    #    这个命令会找到当前目录下所有以 'camoufox' 开头的文件夹并将其重命名
-    mv camoufox* camoufox-linux && \
-    # 5. 现在可以使用固定的路径来赋予执行权限
-    chmod +x /app/camoufox-linux/camoufox && \
-    # 6. 清理apt缓存
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+RUN curl -sSL ${CAMOUFOX_URL} -o camoufox-linux.tar.gz && \
+    tar -xzf camoufox-linux.tar.gz && \
+    rm camoufox-linux.tar.gz && \
+    chmod +x /app/camoufox-linux/camoufox
 
 # 4. 【核心优化】现在，才拷贝你经常变动的代码文件。
 # 这一步放在后面，确保你修改代码时，前面所有重量级的层都能利用缓存。
