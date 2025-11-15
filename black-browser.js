@@ -182,11 +182,21 @@ class RequestProcessor {
     this.activeOperations.clear();
   }
 
+  // =================================================================
+  // ===                 *** 此处代码已修改 ***                 ===
+  // =================================================================
   _constructUrl(requestSpec) {
     let pathSegment = requestSpec.path.startsWith("/")
       ? requestSpec.path.substring(1)
       : requestSpec.path;
     const queryParams = new URLSearchParams(requestSpec.query_params);
+
+    // 检查路径中是否包含自定义的 "-search" 后缀，并将其移除
+    if (pathSegment.includes("-search:")) {
+      pathSegment = pathSegment.replace("-search:", ":");
+      Logger.output(`检测到 "-search" 后缀，已修正API路径为: ${pathSegment}`);
+    }
+
     if (requestSpec.streaming_mode === "fake") {
       Logger.output("假流式模式激活，正在修改请求...");
       if (pathSegment.includes(":streamGenerateContent")) {
@@ -215,6 +225,9 @@ class RequestProcessor {
     return result;
   }
 
+  // =================================================================
+  // ===                 *** 此处代码已修改 ***                 ===
+  // =================================================================
   _buildRequestConfig(requestSpec, signal) {
     const config = {
       method: requestSpec.method,
@@ -229,15 +242,30 @@ class RequestProcessor {
       try {
         let bodyObj = JSON.parse(requestSpec.body);
 
+        // --- 模块0：根据 "-search" 后缀智能联网 ---
+        if (requestSpec.path.includes("-search:")) {
+          // 仅在请求本身不包含 tools 的情况下添加，以尊重原始请求
+          if (!bodyObj.tools) {
+            bodyObj.tools = [{
+              "google_search_retrieval": {}
+            }];
+            Logger.output("✅ 检测到 '-search' 后缀，已为请求开启联网模式。");
+          }
+        }
+
         // --- 模块1：智能过滤 (保留) ---
         const isImageModel =
           requestSpec.path.includes("-image-") ||
-          requestSpec.path.includes("imagen");
+          requestSpec.path.includes("imagen") ||
+          requestSpec.path.includes("gemini-pro-vision");
 
         if (isImageModel) {
           const incompatibleKeys = ["tool_config", "toolChoice", "tools"];
           incompatibleKeys.forEach((key) => {
-            if (bodyObj.hasOwnProperty(key)) delete bodyObj[key];
+            if (bodyObj.hasOwnProperty(key)) {
+              delete bodyObj[key];
+              Logger.output(`检测到图片模型，已移除不兼容的字段: ${key}`);
+            }
           });
           if (bodyObj.generationConfig?.thinkingConfig) {
             delete bodyObj.generationConfig.thinkingConfig;
@@ -296,7 +324,7 @@ class RequestProcessor {
       controller.abort();
     }
   }
-} // <--- 关键！确保这个括号存在
+}
 
 class ProxySystem extends EventTarget {
   constructor(websocketEndpoint) {
@@ -359,8 +387,6 @@ class ProxySystem extends EventTarget {
     }
   }
 
-  // 在 v3.4-black-browser.js 中
-  // [最终武器 - Canvas抽魂] 替换整个 _processProxyRequest 函数
   async _processProxyRequest(requestSpec) {
     const operationId = requestSpec.request_id;
     const mode = requestSpec.streaming_mode || "fake";
