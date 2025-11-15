@@ -19,19 +19,31 @@ RUN npm install --production
 # 3. 【核心优化】将浏览器下载和解压作为独立的一层。
 # 只要CAMOUFOX_URL不变，这一层就会被缓存。这层体积最大，缓存命中至关重要。
 ARG CAMOUFOX_URL
-RUN apt-get update && apt-get install -y unzip curl && \
-    # 1. 下载文件
-    curl -sSL ${CAMOUFOX_URL} -o camoufox-linux.zip && \
-    # 2. 创建最终的目标目录
-    mkdir -p /app/camoufox-linux && \
+RUN \
+    # 确保变量存在
+    echo "--- Downloading from URL: ${CAMOUFOX_URL} ---" && \
+    test -n "${CAMOUFOX_URL}" && \
     \
-    # 3. 将文件直接解压到最终的目标目录中
+    # 更新和安装依赖
+    apt-get update && \
+    apt-get install -y --no-install-recommends unzip curl && \
+    \
+    # 下载文件，使用 -f 选项使其在服务器错误时失败
+    echo "--- Starting download ---" && \
+    curl -fsSL ${CAMOUFOX_URL} -o camoufox-linux.zip && \
+    \
+    # 检查文件是否已下载
+    echo "--- Download finished, checking file ---" && \
+    ls -lh camoufox-linux.zip && \
+    \
+    # 创建目录并解压
+    echo "--- Creating directory and unzipping ---" && \
+    mkdir -p /app/camoufox-linux && \
     unzip camoufox-linux.zip -d /app/camoufox-linux && \
     \
-    # 4. 删除不再需要的压缩包
+    # 清理工作
+    echo "--- Cleaning up ---" && \
     rm camoufox-linux.zip && \
-    \
-    # 5. 清理 apt 缓存，减小镜像体积
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
