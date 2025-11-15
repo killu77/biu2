@@ -182,16 +182,12 @@ class RequestProcessor {
     this.activeOperations.clear();
   }
 
-  // =================================================================
-  // ===                 *** 此处代码已修改 ***                 ===
-  // =================================================================
   _constructUrl(requestSpec) {
     let pathSegment = requestSpec.path.startsWith("/")
       ? requestSpec.path.substring(1)
       : requestSpec.path;
     const queryParams = new URLSearchParams(requestSpec.query_params);
 
-    // 检查路径中是否包含自定义的 "-search" 后缀，并将其移除
     if (pathSegment.includes("-search:")) {
       pathSegment = pathSegment.replace("-search:", ":");
       Logger.output(`检测到 "-search" 后缀，已修正API路径为: ${pathSegment}`);
@@ -225,9 +221,6 @@ class RequestProcessor {
     return result;
   }
 
-  // =================================================================
-  // ===                 *** 此处代码已修改 ***                 ===
-  // =================================================================
   _buildRequestConfig(requestSpec, signal) {
     const config = {
       method: requestSpec.method,
@@ -244,10 +237,12 @@ class RequestProcessor {
 
         // --- 模块0：根据 "-search" 后缀智能联网 ---
         if (requestSpec.path.includes("-search:")) {
-          // 仅在请求本身不包含 tools 的情况下添加，以尊重原始请求
           if (!bodyObj.tools) {
+            // =================================================================
+            // ===                 *** 此处代码已修改 ***                 ===
+            // =================================================================
             bodyObj.tools = [{
-              "google_search_retrieval": {}
+              "google_search": {} // 使用新的工具名称
             }];
             Logger.output("✅ 检测到 '-search' 后缀，已为请求开启联网模式。");
           }
@@ -317,7 +312,7 @@ class RequestProcessor {
     return sanitized;
   }
   cancelOperation(operationId) {
-    this.cancelledOperations.add(operationId); // 核心：将ID加入取消集合
+    this.cancelledOperations.add(operationId);
     const controller = this.activeOperations.get(operationId);
     if (controller) {
       Logger.output(`收到取消指令，正在中止操作 #${operationId}...`);
@@ -361,23 +356,17 @@ class ProxySystem extends EventTarget {
     try {
       requestSpec = JSON.parse(messageData);
 
-      // --- 核心修改：根据 event_type 分发任务 ---
       switch (requestSpec.event_type) {
         case "cancel_request":
-          // 如果是取消指令，则调用取消方法
           this.requestProcessor.cancelOperation(requestSpec.request_id);
           break;
         default:
-          // 默认情况，认为是代理请求
-          // [最终优化] 直接显示路径，不再显示模式，因为路径本身已足够清晰
           Logger.output(`收到请求: ${requestSpec.method} ${requestSpec.path}`);
-
           await this._processProxyRequest(requestSpec);
           break;
       }
     } catch (error) {
       Logger.output("消息处理错误:", error.message);
-      // 只有在代理请求处理中出错时才发送错误响应
       if (
         requestSpec.request_id &&
         requestSpec.event_type !== "cancel_request"
@@ -410,7 +399,6 @@ class ProxySystem extends EventTarget {
       const textDecoder = new TextDecoder();
       let fullBody = "";
 
-      // [核心修正] 在循环内部正确分发流式和非流式数据
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -418,11 +406,8 @@ class ProxySystem extends EventTarget {
         const chunk = textDecoder.decode(value, { stream: true });
 
         if (mode === "real") {
-          // 流式模式：立即转发每个数据块
           this._transmitChunk(chunk, operationId);
         } else {
-          // fake mode
-          // 非流式模式：拼接数据块，等待最后一次性转发
           fullBody += chunk;
         }
       }
@@ -430,7 +415,6 @@ class ProxySystem extends EventTarget {
       Logger.output("数据流已读取完成。");
 
       if (mode === "fake") {
-        // 非流式模式下，在循环结束后，转发拼接好的完整响应体
         this._transmitChunk(fullBody, operationId);
       }
 
@@ -486,7 +470,6 @@ class ProxySystem extends EventTarget {
       status: error.status || 504,
       message: `代理端浏览器错误: ${error.message || "未知错误"}`,
     });
-    // --- 核心修改：根据错误类型，使用不同的日志措辞 ---
     if (error.name === "AbortError") {
       Logger.output("已将“中止”状态发送回服务器");
     } else {
@@ -496,7 +479,6 @@ class ProxySystem extends EventTarget {
 }
 
 async function initializeProxySystem() {
-  // 清理旧的日志
   document.body.innerHTML = "";
   const proxySystem = new ProxySystem();
   try {
@@ -508,3 +490,4 @@ async function initializeProxySystem() {
 }
 
 initializeProxySystem();
+
