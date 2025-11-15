@@ -48,7 +48,7 @@ jobs:
           push: true
           # 核心修改：根据您输入的版本号来生成标签
           # 格式是：ellinalopez/cloud-studio:v1.0-testing
-          tags: ellinalopez/cloud-studio:${{ github.event.inputs.version }}
+          tags: jjf1126/ais2api:${{ github.event.inputs.version }}
           build-args: |
             CAMOUFOX_URL=${{ env.CAMOUFOX_URL }}
           cache-from: type=gha
@@ -59,6 +59,6 @@ jobs:
         # 使用 if 条件判断是否运行此步骤
         if: github.event.inputs.update_latest == true
         run: |
-          IMAGE_ID=$(docker inspect --format='{{.Id}}' ellinalopez/cloud-studio:${{ github.event.inputs.version }})
-          docker tag $IMAGE_ID ellinalopez/cloud-studio:latest
-          docker push ellinalopez/cloud-studio:latest
+          IMAGE_ID=$(docker inspect --format='{{.Id}}' jjf1126/ais2api:${{ github.event.inputs.version }})
+          docker tag $IMAGE_ID jjf1126/ais2api:latest
+          docker push jjf1126/ais2api:latest
