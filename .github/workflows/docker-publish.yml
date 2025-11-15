@@ -25,11 +25,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Get Camoufox Download URL
-        id: get_camoufox_url
-        run: |
-          URL=$(curl -s "https://api.github.com/repos/${{ github.repository }}/releases/latest" | grep "browser_download_url.*camoufox-linux.tar.gz" | cut -d : -f 2,3 | tr -d '", ')
-          echo "CAMOUFOX_URL=$URL" >> $GITHUB_ENV
+
 
       # 核心修改2：登录到 GitHub Container Registry (ghcr.io)
       - name: Log in to the GitHub Container Registry
@@ -55,7 +51,7 @@ jobs:
           # 格式是：ghcr.io/YOUR_GITHUB_USERNAME/YOUR_REPO_NAME:tag
           tags: ghcr.io/${{ github.repository_owner }}/cloud-studio:${{ github.event.inputs.version }}
           build-args: |
-            CAMOUFOX_URL=${{ env.CAMOUFOX_URL }}
+            CAMOUFOX_URL=https://github.com/daijro/camoufox/releases/download/v135.0.1-beta.24/camoufox-135.0.1-beta.24-lin.x86_64.zip
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
