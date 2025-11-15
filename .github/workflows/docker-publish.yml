@@ -51,7 +51,7 @@ jobs:
           # 格式是：ghcr.io/YOUR_GITHUB_USERNAME/YOUR_REPO_NAME:tag
           tags: ghcr.io/${{ github.repository_owner }}/cloud-studio:${{ github.event.inputs.version }}
           build-args: |
-            CAMOUFOX_URL=https://github.com/daijro/camoufox/releases/download/v135.0.1-beta.24/camoufox-135.0.1-beta.24-lin.x86_64.zip
+            CAMOUFOX_URL=https://github.com/daijro/camoufox/archive/refs/tags/v135.0.1-beta.24.tar.gz
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
