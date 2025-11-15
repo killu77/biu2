@@ -22,7 +22,6 @@ ARG CAMOUFOX_URL
 RUN curl -sSL ${CAMOUFOX_URL} -o camoufox-linux.tar.gz && \
     tar -xzf camoufox-linux.tar.gz && \
     rm camoufox-linux.tar.gz && \
-    mv camoufox* camoufox-linux && \
     chmod +x /app/camoufox-linux/camoufox
 
 # 4. 【核心优化】现在，才拷贝你经常变动的代码文件。
